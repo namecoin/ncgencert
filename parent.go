@@ -33,7 +33,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
-	//"net"
+	"net"
 	"net/url"
 	"os"
 	"strings"
@@ -156,6 +156,16 @@ func getParent() (x509.Certificate, any) {
 		log.Fatalf("Failed to generate serial number: %v", err)
 	}
 
+	_, ipv4NetAll, err := net.ParseCIDR("0.0.0.0/0")
+	if err != nil {
+		log.Fatalf("Failed to parse IPv4 constraint: %v", err)
+	}
+
+	_, ipv6NetAll, err := net.ParseCIDR("::/0")
+	if err != nil {
+		log.Fatalf("Failed to parse IPv6 constraint: %v", err)
+	}
+
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -168,10 +178,11 @@ func getParent() (x509.Certificate, any) {
 
 		IsCA:                  true,
 		KeyUsage:              keyUsage,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		//ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 
 		PermittedDNSDomainsCritical: true,
+		ExcludedIPRanges:            []*net.IPNet{ipv4NetAll, ipv6NetAll},
 	}
 
 	hosts := strings.Split(*host, ",")
@@ -180,8 +191,36 @@ func getParent() (x509.Certificate, any) {
 	//		template.IPAddresses = append(template.IPAddresses, ip)
 	//	} else {
 	//		template.DNSNames = append(template.DNSNames, h)
+	if *email {
+	template.PermittedEmailAddresses = append(template.PermittedEmailAddresses, h)
+	} else if *uri {
+	template.PermittedURIDomains = append(template.PermittedURIDomains, h)
+	} else {
 	template.PermittedDNSDomains = append(template.PermittedDNSDomains, h)
+	}
 	//	}
+	}
+
+	if len(template.PermittedDNSDomains) == 0 {
+		template.ExcludedDNSDomains = append(template.ExcludedDNSDomains, ".")
+	}
+
+	if len(template.PermittedEmailAddresses) == 0 {
+		template.ExcludedEmailAddresses = append(template.ExcludedEmailAddresses, ".")
+	}
+
+	if len(template.PermittedURIDomains) == 0 {
+		template.ExcludedURIDomains = append(template.ExcludedURIDomains, ".")
+	}
+
+	if *client {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
+	} else if *code {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+	} else if *smime {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	} else {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
 	}
 
 	//if *isCA {

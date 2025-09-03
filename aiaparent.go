@@ -34,7 +34,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/big"
-	//"net"
+	"net"
 	"os"
 	//"strings"
 	"time"
@@ -156,6 +156,16 @@ func getAIAParent() (x509.Certificate, any) {
 		log.Fatalf("Failed to generate serial number: %v", err)
 	}
 
+	_, ipv4NetAll, err := net.ParseCIDR("0.0.0.0/0")
+	if err != nil {
+		log.Fatalf("Failed to parse IPv4 constraint: %v", err)
+	}
+
+	_, ipv6NetAll, err := net.ParseCIDR("::/0")
+	if err != nil {
+		log.Fatalf("Failed to parse IPv6 constraint: %v", err)
+	}
+
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
@@ -173,6 +183,9 @@ func getAIAParent() (x509.Certificate, any) {
 
 		PermittedDNSDomainsCritical: true,
 		PermittedDNSDomains:         []string{*host},
+		ExcludedIPRanges:            []*net.IPNet{ipv4NetAll, ipv6NetAll},
+		PermittedEmailAddresses:     []string{*host},
+		PermittedURIDomains:         []string{*host},
 	}
 
 	pubBytes, err := x509.MarshalPKIXPublicKey(publicKey(priv))

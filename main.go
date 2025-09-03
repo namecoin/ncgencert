@@ -32,6 +32,7 @@ import (
 	"log"
 	"math/big"
 	//"net"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -40,12 +41,17 @@ import (
 var (
 	//host       = flag.String("host", "", "Comma-separated hostnames and IPs to generate a certificate for")
 	host       = flag.String("host", "", "Comma-separated hostnames to generate a certificate for (only use one unless -parent-chain or -grandparent-chain is set)")
+	email      = flag.Bool("email", false, "Generate a certificate for an email address instead of a DNS name")
+	uri        = flag.Bool("uri", false, "Generate a certificate for a URI instead of a DNS name")
+	client     = flag.Bool("client", false, "Generate a certificate for a TLS client instead of a TLS server (EKU)")
+	code       = flag.Bool("code", false, "Generate a certificate for code signing instead of a TLS server (EKU)")
+	smime      = flag.Bool("smime", false, "Generate a certificate for S/MIME instead of a TLS server (EKU)")
 	validFrom  = flag.String("start-date", "", "Creation date formatted as Jan 1 15:04:05 2011")
 	validFor   = flag.Duration("duration", 365*24*time.Hour, "Duration that certificate is valid for")
 	//isCA       = flag.Bool("ca", false, "whether this cert should be its own Certificate Authority")
 	//rsaBits    = flag.Int("rsa-bits", 2048, "Size of RSA key to generate. Ignored if --ecdsa-curve is set")
 	//ecdsaCurve = flag.String("ecdsa-curve", "", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
-	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (default), P384, P521")
+	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
 	ed25519Key = flag.Bool("ed25519", false, "Generate an Ed25519 key")
 	parentKey  = flag.String("parent-key", "", "(Optional) Path to existing CA private key to sign end-entity cert with")
 	parentChain = flag.String("parent-chain", "", "(Optional) Path to existing CA cert chain to sign end-entity cert with")
@@ -150,7 +156,7 @@ func main() {
 		NotAfter:  notAfterFloored,
 
 		KeyUsage:              keyUsage,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		//ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
 
@@ -159,11 +165,31 @@ func main() {
 	//	if ip := net.ParseIP(h); ip != nil {
 	//		template.IPAddresses = append(template.IPAddresses, ip)
 	//	} else {
+		if *email {
+			template.EmailAddresses = append(template.EmailAddresses, h)
+		} else if *uri {
+			u, err := url.Parse(h)
+			if err != nil {
+				log.Fatalf("Failed to parse URL: %v", err)
+			}
+			template.URIs = append(template.URIs, u)
+		} else {
 			template.DNSNames = append(template.DNSNames, h)
+		}
 	//	}
 	}
 
-	template.Subject.CommonName = template.DNSNames[0]
+	template.Subject.CommonName = hosts[0]
+
+	if *client {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
+	} else if *code {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
+	} else if *smime {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
+	} else {
+		template.ExtKeyUsage = append(template.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
+	}
 
 	//if *isCA {
 	//	template.IsCA = true
