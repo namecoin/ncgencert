@@ -240,9 +240,30 @@ func main() {
 
 	if *sigs == "" && *grandparentKey == "" {
 		log.Print("SUCCESS. You have two deployment options.")
-		log.Print("Option 1 (wastes blockchain space): Place chain.pem and key.pem in your HTTPS server, and place the contents of \"namecoin.json\" in the \"tls\" field for \"*." + *host + "\".")
-		log.Print("Option 2 (conserves blockchain space): sign \"caAIAMessage.txt\" with your Namecoin wallet. Then re-run ncgencert with the \"-grandparent-key\" and \"-sigs\" parameters to generate your final certificate chain; no blockchain transaction is necessary.")
+		log.Print("")
+		log.Print("Option 1 (wastes blockchain space):")
+		log.Print("  Place chain.pem and key.pem in your HTTPS server, and place")
+		log.Print("  the contents of \"namecoin.json\" in the \"tls\" field for")
+		log.Print("  \"*." + *host + "\".")
+		log.Print("")
+		log.Print("Option 2 (conserves blockchain space, signed caAIAMessage flow):")
+		log.Print("  Sign \"caAIAMessage.txt\" with the Namecoin address that owns")
+		log.Print("  the dd/<basename> record for this host. Encaya's")
+		log.Print("  lookupBlockchainMessage path will reject signatures from any")
+		log.Print("  other address. Suggested commands:")
+		log.Print("")
+		log.Print("    # 1. Edit caAIAMessage.txt and replace the placeholder address")
+		log.Print("    #    with the dd/<basename> owner address from `name_show dd/<basename>`.")
+		log.Print("    # 2. Sign:")
+		log.Print("    namecoin-cli -rpcwallet=<wallet> signmessage <address> \"$(cat caAIAMessage.txt)\"")
+		log.Print("    # 3. Save the signature into a JSON map keyed by the same address:")
+		log.Print("    #    {\"<address>\":\"<signature>\"}")
+		log.Print("    # 4. Re-run ncgencert with -grandparent-key=caAIAKey.pem and")
+		log.Print("    #    -sigs=<path to that JSON file> to generate the final chain.")
+		log.Print("    # No blockchain transaction is necessary.")
 	} else {
 		log.Print("SUCCESS. Place chain.pem and key.pem in your HTTPS server.")
+		log.Print("To verify in a browser, ensure encaya can resolve the AIA URI on")
+		log.Print("the intermediate; see https://github.com/namecoin/encaya for setup.")
 	}
 }
