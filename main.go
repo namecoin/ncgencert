@@ -242,6 +242,7 @@ func main() {
 		log.Print("SUCCESS. You have two deployment options.")
 		log.Print("Option 1 (wastes blockchain space): Place chain.pem and key.pem in your HTTPS server, and place the contents of \"namecoin.json\" in the \"tls\" field for \"*." + *host + "\".")
 		log.Print("Option 2 (conserves blockchain space): sign \"caAIAMessage.txt\" with your Namecoin wallet. Then re-run ncgencert with the \"-grandparent-key\" and \"-sigs\" parameters to generate your final certificate chain; no blockchain transaction is necessary.")
+		log.Print("For a DNS domain: place chain.pem and key.pem in your HTTPS server, and add the record in \"dns.zone\" to your DNSSEC-signed zone.")
 	} else {
 		log.Print("SUCCESS. Place chain.pem and key.pem in your HTTPS server.")
 	}
