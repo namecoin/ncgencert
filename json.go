@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 )
@@ -38,4 +39,14 @@ func writeJSONTLSA(priv any) {
 	}
 
 	log.Print("wrote namecoin.json")
+
+	// Same record in DNS zone file format, for DNS domains.
+	record := fmt.Sprintf("*.%s. IN TLSA 2 1 1 %x\n", *host, pubHash)
+
+	err = ioutil.WriteFile("dns.zone", []byte(record), 0600)
+	if err != nil {
+		log.Fatalf("Failed to write data to dns.zone: %v", err)
+	}
+
+	log.Print("wrote dns.zone")
 }
